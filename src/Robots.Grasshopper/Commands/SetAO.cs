@@ -1,8 +1,8 @@
-﻿namespace Robots.Grasshopper.Commands;
+namespace Robots.Grasshopper.Commands;
 
 public class SetAO : GH_Component
 {
-    public SetAO() : base("Set AO", "SetAO", "Set analog output", "Robots", "Commands") { }
+    public SetAO() : base("Set AO", "SetAO", "Set analog outputs", "Robots", "Commands") { }
     public override GH_Exposure Exposure => GH_Exposure.secondary;
     public override Guid ComponentGuid => new("{CAA1A764-D588-4D63-95EA-9C8D43374B8D}");
     protected override System.Drawing.Bitmap Icon => Util.GetIcon("iconSetAO");

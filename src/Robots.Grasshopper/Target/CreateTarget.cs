@@ -4,6 +4,7 @@ using Grasshopper;
 using Grasshopper.Kernel.Parameters;
 using Grasshopper.Kernel.Special;
 using GH_IO.Serialization;
+using Grasshopper.Kernel;
 
 namespace Robots.Grasshopper;
 
@@ -22,7 +23,10 @@ public sealed class CreateTarget : GH_Component, IGH_VariableParameterComponent
             new ZoneParameter() { Name = "Zone", NickName = "Z", Description = "Approximation zone in mm", Optional = true },
             new CommandParameter() { Name = "Command", NickName = "C", Description = "Robot command", Optional = true },
             new FrameParameter() { Name = "Frame", NickName = "F", Description = "Base frame", Optional = true },
-            new JointsParameter() { Name = "External", NickName = "E", Description = "External axes", Optional = true }
+            new JointsParameter() { Name = "External", NickName = "E", Description = "External axes", Optional = true },
+            new MaxForceParameter(){ Name = "MaxForce", NickName= "MF", Description = "Max Force", Optional = true},
+            new ReactionParameter(){ Name = "ReactionVector", NickName= "Rv", Description = "Reaction Vector", Optional = true}
+
     ];
 
     bool _isCartesian = true;
@@ -48,6 +52,7 @@ public sealed class CreateTarget : GH_Component, IGH_VariableParameterComponent
 
         FixJointsParams(1);
         FixJointsParams(10);
+        FixJointsParams(12);
     }
 
     void FixJointsParams(int index)
@@ -74,6 +79,8 @@ public sealed class CreateTarget : GH_Component, IGH_VariableParameterComponent
         bool hasTarget = Params.Input.Any(x => x.Name == "Target");
         bool hasJoints = Params.Input.Any(x => x.Name == "Joints");
         bool hasPlane = Params.Input.Any(x => x.Name == "Plane");
+        bool hasMaxForce = Params.Input.Any(x => x.Name == "MaxForce");
+        bool hasReactionVector = Params.Input.Any(x => x.Name == "ReactionVector");
         bool hasConfig = Params.Input.Any(x => x.Name == "RobConf");
         bool hasMotion = Params.Input.Any(x => x.Name == "Motion");
         bool hasTool = Params.Input.Any(x => x.Name == "Tool");
@@ -101,6 +108,8 @@ public sealed class CreateTarget : GH_Component, IGH_VariableParameterComponent
         Command? command = null;
         Frame? frame = null;
         double[]? external = null;
+        double? max_force = null;
+        double[]? reaction_vector = null;
 
         if (hasJoints)
         {
@@ -204,6 +213,23 @@ public sealed class CreateTarget : GH_Component, IGH_VariableParameterComponent
             external = sourceTarget.External;
         }
 
+        if ( hasMaxForce)
+        {
+            DA.GetData("MaxForce", ref max_force);
+        }
+      
+        if (hasReactionVector)
+        {
+            DA.GetData("ReactionVector", ref reaction_vector);
+        }else if (sourceTarget is not null)
+        {
+            
+            
+            if (sourceTarget is CartesianTarget cartesianTarget)
+                joints = cartesianTarget.ReactionVector;
+            
+        }
+
         bool localCartesian = _isCartesian;
 
         if (hasTarget && !hasPlane && !hasJoints && sourceTarget is not null)
@@ -213,7 +239,7 @@ public sealed class CreateTarget : GH_Component, IGH_VariableParameterComponent
 
         if (localCartesian)
         {
-            target = new CartesianTarget(plane, configuration, motion, tool, speed, zone, command, frame, external);
+            target = new CartesianTarget(plane, configuration, motion, tool, speed, zone, command, frame, external, max_force,reaction_vector);
         }
         else
         {
@@ -251,6 +277,8 @@ public sealed class CreateTarget : GH_Component, IGH_VariableParameterComponent
         Menu_AppendSeparator(menu);
         Menu_AppendItem(menu, "Cartesian target", SwitchCartesianEvent, true, _isCartesian);
         Menu_AppendItem(menu, "Plane input", AddPlane, _isCartesian, Params.Input.Any(x => x.Name == "Plane"));
+        Menu_AppendItem(menu, "Max Force input", AddMaxForce, _isCartesian, Params.Input.Any(x => x.Name == "MaxForce")); 
+        Menu_AppendItem(menu, "Reaction vector input", AddReactionVector, _isCartesian, Params.Input.Any(x => x.Name == "ReactionVector"));
         Menu_AppendItem(menu, "Configuration input", AddConfig, _isCartesian, Params.Input.Any(x => x.Name == "RobConf"));
         Menu_AppendItem(menu, "Motion input", AddMotion, _isCartesian, Params.Input.Any(x => x.Name == "Motion"));
         Menu_AppendSeparator(menu);
@@ -365,6 +393,10 @@ public sealed class CreateTarget : GH_Component, IGH_VariableParameterComponent
     private void AddCommand(object sender, EventArgs e) => AddParam(8);
     private void AddFrame(object sender, EventArgs e) => AddParam(9);
     private void AddExternal(object sender, EventArgs e) => AddParam(10);
+
+    private void AddMaxForce(object sender, EventArgs e) => AddParam(11);
+
+    private void AddReactionVector(object sender, EventArgs e) => AddParam(12);
 
     bool IGH_VariableParameterComponent.CanInsertParameter(GH_ParameterSide side, int index) => false;
     bool IGH_VariableParameterComponent.CanRemoveParameter(GH_ParameterSide side, int index) => false;
